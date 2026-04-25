@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <style>
+      /* Un poco de estilo para que no se vea vacío */
+      body { background: #121212; color: #00ff00; font-family: monospace; padding: 20px; }
+    </style>
+  </head>
+  <body>
+    <h1>Mi primer programa Python en la Web</h1>
+    <hr>
+
+    <script type="py">
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+from datetime import datetime, timezone
+import hashlib
+import json
+import os
+
+# =========================
+#  JOHNSON CHAIN REGISTRY
+# =========================
+
+class JohnsonChainRegistry:
+    """
+    Registro encadenado de eventos estructurales.
+    Cada entrada referencia criptográficamente a la anterior.
+    """
+
+    def __init__(self, identificador: str):
+        self.identificador = identificador
+        self.creado = datetime.now(timezone.utc).isoformat()
+        self.chain = []
+
+    def _hash(self, payload: dict) -> str:
+        canon = json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False
+        )
+        return hashlib.sha256(canon.encode("utf-8")).hexdigest()
+
+    def registrar_evento(self, tipo: str, contenido: dict) -> dict:
+        anterior = self.chain[-1]["hash"] if self.chain else None
+
+        evento = {
+            "index": len(self.chain),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "tipo": tipo,
+            "contenido": contenido,
+            "hash_anterior": anterior
+        }
+
+        evento["hash"] = self._hash(evento)
+        self.chain.append(evento)
+        return evento
+
+    def estado_actual(self) -> dict:
+        return {
+            "identificador": self.identificador,
+            "eventos": len(self.chain),
+            "ultimo_hash": self.chain[-1]["hash"] if self.chain else None
+        }
+
+    def exportar(self) -> dict:
+        return {
+            "identificador": self.identificador,
+            "creado": self.creado,
+            "total_eventos": len(self.chain),
+            "cadena": self.chain
+        }
+
+
+# =========================
+#  IAQ / TPI / TB LÓGICA
+# =========================
+
+def leer_multilinea():
+    print("=== IAQ-CHAIN / CPIA-JOHNSON v3.0 ===")
+    print("Escribe tu texto (multilínea). Finaliza con EOF en una línea sola y ENTER.\n")
+
+    lineas = []
+    while True:
+        try:
+            linea = input()
+        except EOFError:
+            break
+        if linea.strip() == "EOF":
+            break
+        lineas.append(linea)
+    return "\n".join(lineas).strip()
+
+
+def detectar_contradiccion(texto: str) -> bool:
+    t = texto.lower()
+    patrones = [
+        ("irreversibilidad", "reversible"),
+        ("estable", "inestable"),
+        ("aumenta", "disminuye"),
+        ("sube", "baja"),
+        ("mejora", "empeora"),
+    ]
+    return any(a in t and b in t for a, b in patrones)
+
+
+def detectar_saturacion(texto: str) -> bool:
+    # saturación simple: texto muy largo + muchas comas/puntos
+    n_chars = len(texto)
+    n_punct = texto.count(",") + texto.count(".") + texto.count(";") + texto.count(":")
+    return n_chars > 2000 or n_punct > 80
+
+
+def detectar_irreversibilidad(texto: str) -> bool:
+    t = texto.lower()
+    return any(w in t for w in ["irreversibilidad", "irreversible", "punto de no retorno", "colapso estructural"])
+
+
+def detectar_bifurcacion(texto: str) -> bool:
+    t = texto.lower()
+    return any(w in t for w in ["bifurcación", "dos escenarios", "mutuamente excluyentes", "ramificación"])
+
+
+def heuristica_lectura(texto: str) -> str:
+    t = texto.lower()
+    if detectar_saturacion(texto) or detectar_contradiccion(texto) or detectar_irreversibilidad(texto):
+        return "DISRUPTIVO"
+    if any(w in t for w in ["hipótesis", "podría", "posible", "eventual", "escenario"]):
+        return "AMBIGUO"
+    if len(texto) < 40:
+        return "NULO"
+    return "REAL"
+
+
+def heuristica_categoria(texto: str) -> str:
+    t = texto.lower()
+    if detectar_irreversibilidad(texto) or "riesgo" in t or "colapso" in t:
+        return "Crítico"
+    if any(w in t for w in ["propuesta", "modelo", "marco", "estructura", "conceptual"]):
+        return "Meta"
+    if any(w in t for w in ["se recomienda", "debe", "es necesario", "se requiere"]):
+        return "Útil"
+    if len(texto.split()) < 15:
+        return "Inutilizable"
+    return "Señal"
+
+
+def heuristica_score(texto: str) -> float:
+    palabras = texto.split()
+    n = len(palabras)
+    if n == 0:
+        return 0.0
+    if n < 20:
+        return 0.2
+    if n < 80:
+        return 0.4
+    if n < 200:
+        return 0.6
+    if n < 400:
+        return 0.8
+    return 0.9
+
+
+def generar_preguntas_tpi(texto: str):
+    titulo = texto.strip().split("\n", 1)[0]
+    titulo_compacto = " ".join(titulo.split())
+    if len(titulo_compacto) > 140:
+        titulo_compacto = titulo_compacto[:137] + "..."
+
+    preguntas = [
+        f"¿Qué implica realmente: {titulo_compacto}?",
+        f"¿Qué pasaría si {titulo_compacto} no fuera cierto?",
+        f"¿Qué otros sistemas se ven afectados por {titulo_compacto}?"
+    ]
+    return preguntas
+
+
+def generar_opciones_posibles(lectura: str, categoria: str, flags: dict):
+    opciones = []
+    if lectura == "DISRUPTIVO":
+        opciones = [
+            "Reducir la intensidad del intercambio.",
+            "Pausar interacciones para evitar escalada.",
+            "Tomar la decisión fuera del sistema, según tu contexto personal."
+        ]
+    elif categoria == "Crítico":
+        opciones = [
+            "Identificar el origen de la señal crítica.",
+            "Separar hechos de interpretaciones.",
+            "Registrar el evento en un canal de auditoría independiente."
+        ]
+    elif categoria == "Meta":
+        opciones = [
+            "Usar el texto como marco conceptual, no como instrucción directa.",
+            "Derivar preguntas de investigación a partir del modelo.",
+            "Comparar este modelo con otros marcos teóricos similares."
+        ]
+    else:
+        opciones = [
+            "Observar si el contexto cambia antes de actuar.",
+            "Registrar el evento sin tomar decisiones inmediatas.",
+            "Tomar la decisión fuera del sistema, según tu contexto personal."
+        ]
+
+    if flags.get("irreversibilidad"):
+        opciones.append("Marcar este evento como potencialmente irreversible para futuras revisiones.")
+    if flags.get("bifurcacion"):
+        opciones.append("Documentar explícitamente los escenarios mutuamente excluyentes antes de avanzar.")
+
+    return opciones
+
+
+def construir_burbujas(texto: str, lectura: str, categoria: str, score: float, preguntas, flags: dict, opciones):
+    burbujas = {
+        "entrada_usuario": {
+            "tipo": "Verificada" if lectura == "REAL" else "Complementaria",
+            "content": texto,
+            "status": "❓",
+            "connections": ["analisis_iaq", "preguntas_tpi", "opciones_posibles"]
+        },
+        "analisis_iaq": {
+            "tipo": "Verificada",
+            "lectura": lectura,
+            "categoria": categoria,
+            "score": score,
+            "flags": flags,
+            "connections": ["entrada_usuario", "preguntas_tpi", "opciones_posibles"]
+        },
+        "preguntas_tpi": {
+            "tipo": "Complementaria",
+            "preguntas": preguntas,
+            "connections": ["entrada_usuario", "analisis_iaq"]
+        },
+        "opciones_posibles": {
+            "tipo": "Complementaria",
+            "opciones": opciones,
+            "connections": ["entrada_usuario", "analisis_iaq"]
+        }
+    }
+    return burbujas
+
+
+def construir_estado_sistema(texto: str, lectura: str, categoria: str, score: float, preguntas, burbujas, flags: dict, opciones):
+    timestamp = datetime.now(timezone.utc).isoformat()
+    estado = {
+        "engine": {
+            "bubbles": burbujas,
+            "log": [
+                {
+                    "timestamp": timestamp,
+                    "question": "Entrada dinámica",
+                    "answer": texto
+                }
+            ]
+        },
+        "iaq": {
+            "lectura": lectura,
+            "estado": "ACCEPT",
+            "categoria": categoria,
+            "score": round(score, 2),
+            "flags": flags,
+            "opciones_posibles": opciones
+        },
+        "tpi_questions": preguntas
+    }
+    return estado
+
+
+def imprimir_resumen_iaq(estado: dict):
+    iaq = estado["iaq"]
+    print("\n--- LECTURA IAQ ---")
+    print(f"Lectura: {iaq['lectura']}")
+    print(f"Estado: {iaq['estado']}")
+    print(f"Categoría: {iaq['categoria']}")
+    print(f"Score: {iaq['score']}")
+    print(f"Flags: {iaq['flags']}")
+
+
+def imprimir_preguntas(preguntas):
+    print("\n--- Preguntas generadas (TPI) ---")
+    for p in preguntas:
+        print(f"• {p}")
+
+
+def imprimir_opciones(opciones):
+    print("\n--- Opciones posibles (NO decisiones) ---")
+    for i, op in enumerate(opciones, 1):
+        print(f"{i}. {op}")
+
+
+def imprimir_estado_sistema(estado: dict):
+    print("\n--- Estado del sistema (burbujas + log) ---")
+    print(json.dumps(estado, ensure_ascii=False, indent=2))
+
+
+def exportar_a_archivo(registry: JohnsonChainRegistry, nombre: str = "iaq_chain_export.json"):
+    data = registry.exportar()
+    with open(nombre, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    print(f"\nCadena exportada a archivo: {nombre}")
+
+
+# =========================
+#  MAIN INTERACTIVO
+# =========================
+
+def main():
+    registry = JohnsonChainRegistry("IAQ-CHAIN-CPIA-JOHNSON")
+
+    while True:
+        texto = leer_multilinea()
+
+        if not texto:
+            print("No se ingresó texto. Saliendo.")
+            break
+
+        # Flags avanzados
+        flags = {
+            "contradiccion": detectar_contradiccion(texto),
+            "saturacion": detectar_saturacion(texto),
+            "irreversibilidad": detectar_irreversibilidad(texto),
+            "bifurcacion": detectar_bifurcacion(texto)
+        }
+
+        # IAQ
+        lectura = heuristica_lectura(texto)
+        categoria = heuristica_categoria(texto)
+        score = heuristica_score(texto)
+
+        # TPI
+        preguntas = generar_preguntas_tpi(texto)
+
+        # Opciones
+        opciones = generar_opciones_posibles(lectura, categoria, flags)
+
+        # TB
+        burbujas = construir_burbujas(texto, lectura, categoria, score, preguntas, flags, opciones)
+
+        # Estado
+        estado = construir_estado_sistema(texto, lectura, categoria, score, preguntas, burbujas, flags, opciones)
+
+        # Registrar en cadena
+        evento = registry.registrar_evento(
+            tipo="iaq_event",
+            contenido=estado
+        )
+
+        # Salida en consola
+        imprimir_resumen_iaq(estado)
+        imprimir_preguntas(preguntas)
+        imprimir_opciones(opciones)
+
+        print("\n--- Evento registrado en JohnsonChain ---")
+        print(json.dumps(evento, ensure_ascii=False, indent=2))
+
+        print("\n--- Estado actual de la cadena ---")
+        print(json.dumps(registry.estado_actual(), ensure_ascii=False, indent=2))
+
+        print("\n¿Procesar otro texto? (s/n): ", end="")
+        r = input().strip().lower()
+        if r != "s":
+            break
+
+    print("\n--- Cadena completa (exportada en memoria) ---")
+    print(json.dumps(registry.exportar(), ensure_ascii=False, indent=2))
+
+    print("\n¿Guardar cadena en archivo JSON? (s/n): ", end="")
+    r = input().strip().lower()
+    if r == "s":
+        exportar_a_archivo(registry)
+
+    print("\n[Program finished]")
+
+
+if __name__ == "__main__":
+    main()
+    </script>
+
+  </body>
+</html>
